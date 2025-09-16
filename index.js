@@ -7,7 +7,16 @@ const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.BOT_TOKEN || '8403400788:AAEbCN7oZRdQRqLdrmyJ44NL3TtB71i-b74';
 const RENDER_APP_URL = process.env.RENDER_APP_URL || 'https://your-app.onrender.com';
 
-const bot = new TelegramBot(TOKEN, {polling: true});
+// Используем только polling (вебхуки не работают на бесплатном Render)
+const bot = new TelegramBot(TOKEN, {
+    polling: {
+        interval: 300,
+        autoStart: true,
+        params: {
+            timeout: 10
+        }
+    }
+});
 
 // Расширенные тексты для ответов
 const responses = {
@@ -43,6 +52,8 @@ const responses = {
 
 // Функция для поиска ключевых слов
 function findResponse(text) {
+    if (!text) return null;
+    
     const lowerText = text.toLowerCase();
     
     for (const [key, response] of Object.entries(responses)) {
@@ -85,15 +96,19 @@ bot.onText(/\/ping/, (msg) => {
     bot.sendMessage(chatId, '🏓 Pong! Бот активен и работает!');
 });
 
+// Обработка команды /status
+bot.onText(/\/status/, (msg) => {
+    const chatId = msg.chat.id;
+    const statusText = `📊 Статус бота:\n• Работает: Да\n• Uptime: ${Math.floor(process.uptime() / 60)} минут\n• Сервер: Render\n• Режим: Polling`;
+    bot.sendMessage(chatId, statusText);
+});
+
 // Обработка текстовых сообщений
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
     
-    if (!text) return;
-    
-    // Игнорируем команды
-    if (text.startsWith('/')) return;
+    if (!text || text.startsWith('/')) return;
     
     // Поиск по ключевым словам
     const foundResponse = findResponse(text);
@@ -101,9 +116,7 @@ bot.on('message', (msg) => {
     if (foundResponse) {
         bot.sendMessage(chatId, foundResponse, getKeyboard());
     } else {
-        // Если не нашли ключевые слова, показываем меню
         const defaultText = `🤖 Я не совсем понял ваш вопрос. Вот что я могу рассказать:\n\nВыберите вариант ниже или опишите вопрос подробнее ⬇️`;
-        
         bot.sendMessage(chatId, defaultText, getKeyboard());
     }
 });
@@ -112,6 +125,8 @@ bot.on('message', (msg) => {
 bot.on('text', (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
+    
+    if (!text || text.startsWith('/')) return;
     
     const buttonHandlers = {
         '💰 сколько стоит?': responses.price.text,
@@ -132,16 +147,16 @@ bot.on('text', (msg) => {
 async function pingSelf() {
     try {
         if (RENDER_APP_URL && RENDER_APP_URL !== 'https://your-app.onrender.com') {
-            await axios.get(RENDER_APP_URL);
+            await axios.get(`${RENDER_APP_URL}/health`);
             console.log('✅ Self-ping successful:', new Date().toLocaleString());
         }
     } catch (error) {
-        console.log('⚠️ Self-ping error:', error.message);
+        console.log('⚠️ Self-ping error (normal for free tier):', error.message);
     }
 }
 
-// Запускаем самопинг каждые 10 минут
-setInterval(pingSelf, 10 * 60 * 1000);
+// Запускаем самопинг каждые 5 минут
+setInterval(pingSelf, 5 * 60 * 1000);
 
 // Express server
 app.use(express.json());
@@ -150,7 +165,8 @@ app.get('/', (req, res) => {
     res.json({
         status: 'Dubai Escort Bot is running!',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime()
+        uptime: process.uptime(),
+        mode: 'polling'
     });
 });
 
@@ -159,21 +175,22 @@ app.get('/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         time: new Date().toLocaleString('ru-RU'),
-        memory: process.memoryUsage()
+        memory: process.memoryUsage(),
+        uptime: process.uptime()
     });
 });
 
-// Endpoint для принудительного пинга
 app.get('/ping', (req, res) => {
     res.json({ message: 'Pong!', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`🔄 Self-ping enabled for: ${RENDER_APP_URL}`);
+    console.log(`📱 Bot mode: Polling (webhooks disabled for Render free tier)`);
 });
 
 // Пингуем сразу при старте
-pingSelf();
+setTimeout(pingSelf, 5000);
 
 console.log('🤖 Dubai Escort Bot started with anti-sleep protection...');
