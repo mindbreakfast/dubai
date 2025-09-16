@@ -5,7 +5,7 @@ const axios = require('axios');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.BOT_TOKEN || '8403400788:AAEbCN7oZRdQRqLdrmyJ44NL3TtB71i-b74';
-const RENDER_APP_URL = process.env.RENDER_APP_URL || 'https://your-app.onrender.com';
+const RENDER_APP_URL = process.env.RENDER_APP_URL || 'https://dubai-8868.onrender.com';
 
 // Используем только polling (вебхуки не работают на бесплатном Render)
 const bot = new TelegramBot(TOKEN, {
