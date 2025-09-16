@@ -4,10 +4,9 @@ const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const TOKEN = process.env.BOT_TOKEN || '8403400788:AAEbCN7oZRdQRqLdrmyJ44NL3TtB71i-b74';
-const RENDER_APP_URL = process.env.RENDER_APP_URL || 'https://dubai-8868.onrender.com';
+const TOKEN = process.env.BOT_TOKEN || 'YOUR_BOT_TOKEN_HERE';
+const RENDER_APP_URL = process.env.RENDER_APP_URL || 'https://your-app.onrender.com';
 
-// Используем только polling (вебхуки не работают на бесплатном Render)
 const bot = new TelegramBot(TOKEN, {
     polling: {
         interval: 300,
@@ -103,31 +102,20 @@ bot.onText(/\/status/, (msg) => {
     bot.sendMessage(chatId, statusText);
 });
 
-// Обработка текстовых сообщений
+// Обработка ВСЕХ текстовых сообщений в одном обработчике
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
     
-    if (!text || text.startsWith('/')) return;
+    if (!text) return;
     
-    // Поиск по ключевым словам
-    const foundResponse = findResponse(text);
-    
-    if (foundResponse) {
-        bot.sendMessage(chatId, foundResponse, getKeyboard());
-    } else {
-        const defaultText = `🤖 Я не совсем понял ваш вопрос. Вот что я могу рассказать:\n\nВыберите вариант ниже или опишите вопрос подробнее ⬇️`;
-        bot.sendMessage(chatId, defaultText, getKeyboard());
+    // Обработка команд
+    if (text.startsWith('/')) {
+        // Команды уже обрабатываются onText, поэтому пропускаем
+        return;
     }
-});
-
-// Обработка нажатий на кнопки
-bot.on('text', (msg) => {
-    const chatId = msg.chat.id;
-    const text = msg.text;
     
-    if (!text || text.startsWith('/')) return;
-    
+    // Проверяем, является ли сообщение нажатием на кнопку
     const buttonHandlers = {
         '💰 сколько стоит?': responses.price.text,
         '💳 чем платить?': responses.payment.text,
@@ -138,12 +126,25 @@ bot.on('text', (msg) => {
     };
     
     const lowerText = text.toLowerCase();
+    
+    // Если это нажатие на кнопку
     if (buttonHandlers[lowerText]) {
         bot.sendMessage(chatId, buttonHandlers[lowerText], getKeyboard());
+        return; // Важно: выходим после обработки кнопки
+    }
+    
+    // Если это обычный текст (не кнопка)
+    const foundResponse = findResponse(text);
+    
+    if (foundResponse) {
+        bot.sendMessage(chatId, foundResponse, getKeyboard());
+    } else {
+        const defaultText = `🤖 Я не совсем понял ваш вопрос. Вот что я могу рассказать:\n\nВыберите вариант ниже или опишите вопрос подробнее ⬇️`;
+        bot.sendMessage(chatId, defaultText, getKeyboard());
     }
 });
 
-// Функция для самопинга (чтобы сервер не засыпал)
+// Функция для самопинга
 async function pingSelf() {
     try {
         if (RENDER_APP_URL && RENDER_APP_URL !== 'https://your-app.onrender.com') {
@@ -151,7 +152,7 @@ async function pingSelf() {
             console.log('✅ Self-ping successful:', new Date().toLocaleString());
         }
     } catch (error) {
-        console.log('⚠️ Self-ping error (normal for free tier):', error.message);
+        console.log('⚠️ Self-ping error:', error.message);
     }
 }
 
@@ -170,12 +171,10 @@ app.get('/', (req, res) => {
     });
 });
 
-// Health check endpoint для Render
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'OK', 
         time: new Date().toLocaleString('ru-RU'),
-        memory: process.memoryUsage(),
         uptime: process.uptime()
     });
 });
@@ -186,11 +185,10 @@ app.get('/ping', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`🔄 Self-ping enabled for: ${RENDER_APP_URL}`);
-    console.log(`📱 Bot mode: Polling (webhooks disabled for Render free tier)`);
+    console.log(`📱 Bot mode: Polling`);
 });
 
 // Пингуем сразу при старте
 setTimeout(pingSelf, 5000);
 
-console.log('🤖 Dubai Escort Bot started with anti-sleep protection...');
+console.log('🤖 Dubai Escort Bot started...');
