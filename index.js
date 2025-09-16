@@ -1,9 +1,11 @@
 const TelegramBot = require('node-telegram-bot-api');
 const express = require('express');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.BOT_TOKEN || '8403400788:AAEbCN7oZRdQRqLdrmyJ44NL3TtB71i-b74';
+const RENDER_APP_URL = process.env.RENDER_APP_URL || 'https://your-app.onrender.com';
 
 const bot = new TelegramBot(TOKEN, {polling: true});
 
@@ -77,6 +79,12 @@ bot.onText(/\/start/, (msg) => {
     bot.sendMessage(chatId, welcomeText, getKeyboard());
 });
 
+// Обработка команды /ping для проверки работы
+bot.onText(/\/ping/, (msg) => {
+    const chatId = msg.chat.id;
+    bot.sendMessage(chatId, '🏓 Pong! Бот активен и работает!');
+});
+
 // Обработка текстовых сообщений
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
@@ -114,19 +122,58 @@ bot.on('text', (msg) => {
         '❓ другие вопросы': `🤔 Задайте ваш вопрос текстом, и я постараюсь помочь!\n\nИли дождитесь оператора для консультации.`
     };
     
-    if (buttonHandlers[text.toLowerCase()]) {
-        bot.sendMessage(chatId, buttonHandlers[text.toLowerCase()], getKeyboard());
+    const lowerText = text.toLowerCase();
+    if (buttonHandlers[lowerText]) {
+        bot.sendMessage(chatId, buttonHandlers[lowerText], getKeyboard());
     }
 });
 
+// Функция для самопинга (чтобы сервер не засыпал)
+async function pingSelf() {
+    try {
+        if (RENDER_APP_URL && RENDER_APP_URL !== 'https://your-app.onrender.com') {
+            await axios.get(RENDER_APP_URL);
+            console.log('✅ Self-ping successful:', new Date().toLocaleString());
+        }
+    } catch (error) {
+        console.log('⚠️ Self-ping error:', error.message);
+    }
+}
+
+// Запускаем самопинг каждые 10 минут
+setInterval(pingSelf, 10 * 60 * 1000);
+
 // Express server
 app.use(express.json());
+
 app.get('/', (req, res) => {
-    res.json({status: 'Dubai Escort Bot is running!'});
+    res.json({
+        status: 'Dubai Escort Bot is running!',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
+// Health check endpoint для Render
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'OK', 
+        time: new Date().toLocaleString('ru-RU'),
+        memory: process.memoryUsage()
+    });
+});
+
+// Endpoint для принудительного пинга
+app.get('/ping', (req, res) => {
+    res.json({ message: 'Pong!', timestamp: new Date().toISOString() });
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`🔄 Self-ping enabled for: ${RENDER_APP_URL}`);
 });
 
-console.log('🤖 Dubai Escort Bot started...');
+// Пингуем сразу при старте
+pingSelf();
+
+console.log('🤖 Dubai Escort Bot started with anti-sleep protection...');
