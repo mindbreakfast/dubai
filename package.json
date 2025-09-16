@@ -1,7 +1,7 @@
 {
-  "name": "dubai-escort-bot-ai",
-  "version": "1.0.0",
-  "description": "Smart Telegram bot for Dubai",
+  "name": "dubai-escort-bot-anti-sleep",
+  "version": "2.0.0",
+  "description": "Smart Telegram bot for Dubai escort",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -9,7 +9,8 @@
   },
   "dependencies": {
     "node-telegram-bot-api": "^0.64.0",
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
